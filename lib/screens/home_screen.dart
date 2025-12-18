@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'builder_screen.dart';
 import 'saved_builds_screen.dart';
+import 'compare_builds_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -56,6 +57,21 @@ class HomeScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.save),
                 label: const Text('My Saved Builds'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CompareBuildsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.compare_arrows),
+                label: const Text('Compare Builds'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
