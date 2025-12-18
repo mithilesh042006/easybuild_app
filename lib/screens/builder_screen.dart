@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 import '../providers/build_provider.dart';
 import 'component_selection_screen.dart';
+import 'review_build_screen.dart';
 
 class BuilderScreen extends ConsumerWidget {
   const BuilderScreen({super.key});
@@ -188,7 +189,11 @@ class BuilderScreen extends ConsumerWidget {
               child: ElevatedButton(
                 onPressed: state.totalPrice > 0
                     ? () {
-                        // TODO: Navigate to final review
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ReviewBuildScreen(),
+                          ),
+                        );
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
