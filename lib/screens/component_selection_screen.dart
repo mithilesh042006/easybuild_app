@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 import '../providers/build_provider.dart';
 import '../services/amazon_api_service.dart';
+import 'product_detail_screen.dart';
 
 class ComponentSelectionScreen extends ConsumerStatefulWidget {
   final ComponentType componentType;
@@ -169,8 +170,13 @@ class _ComponentSelectionScreenState
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          ref.read(buildProvider.notifier).selectComponent(component);
-          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  ProductDetailScreenWithActions(component: component),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

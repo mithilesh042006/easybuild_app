@@ -2,6 +2,36 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/component.dart';
 
+class ProductDetails {
+  final String asin;
+  final String title;
+  final String? description;
+  final String? imageUrl;
+  final List<String> images;
+  final double price;
+  final String? priceDisplay;
+  final String? rating;
+  final String? reviewCount;
+  final String? productUrl;
+  final String? brand;
+  final List<Map<String, String>> features;
+
+  const ProductDetails({
+    required this.asin,
+    required this.title,
+    this.description,
+    this.imageUrl,
+    this.images = const [],
+    required this.price,
+    this.priceDisplay,
+    this.rating,
+    this.reviewCount,
+    this.productUrl,
+    this.brand,
+    this.features = const [],
+  });
+}
+
 class AmazonApiService {
   static const String _baseUrl = 'real-time-amazon-data.p.rapidapi.com';
   static const String _apiKey =
@@ -43,11 +73,65 @@ class AmazonApiService {
           specs: {
             'Rating': product['product_star_rating'] ?? 'N/A',
             'Reviews': product['product_num_ratings']?.toString() ?? '0',
+            'ProductUrl': product['product_url'] ?? '',
           },
         );
       }).toList();
     } else {
       throw Exception('Failed to load products: ${response.statusCode}');
+    }
+  }
+
+  /// Fetch detailed product information by ASIN
+  Future<ProductDetails> getProductDetails({
+    required String asin,
+    String country = 'US',
+  }) async {
+    final uri = Uri.https(_baseUrl, '/product-details', {
+      'asin': asin,
+      'country': country,
+    });
+
+    final response = await http.get(
+      uri,
+      headers: {'x-rapidapi-key': _apiKey, 'x-rapidapi-host': _apiHost},
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final product = data['data'] ?? {};
+
+      final priceStr = product['product_price'] as String? ?? '\$0';
+      final priceValue =
+          double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+
+      // Extract features
+      final aboutProduct = product['about_product'] as List? ?? [];
+      final features = aboutProduct
+          .map((f) => {'feature': f.toString()})
+          .toList()
+          .cast<Map<String, String>>();
+
+      // Extract images
+      final productPhotos = product['product_photos'] as List? ?? [];
+      final images = productPhotos.map((p) => p.toString()).toList();
+
+      return ProductDetails(
+        asin: asin,
+        title: product['product_title'] ?? 'Unknown Product',
+        description: product['product_description'],
+        imageUrl: product['product_photo'],
+        images: images,
+        price: priceValue,
+        priceDisplay: product['product_price'],
+        rating: product['product_star_rating'],
+        reviewCount: product['product_num_ratings']?.toString(),
+        productUrl: product['product_url'],
+        brand: product['product_byline'],
+        features: features,
+      );
+    } else {
+      throw Exception('Failed to load product details: ${response.statusCode}');
     }
   }
 
