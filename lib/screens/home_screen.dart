@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'builder_screen.dart';
+import 'saved_builds_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -47,9 +48,10 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () {
-                  // TODO: Implement Saved Builds
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Saved Builds coming soon!')),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SavedBuildsScreen(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.save),

@@ -5,6 +5,8 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../models/component.dart';
 import '../providers/build_provider.dart';
 import '../services/performance_service.dart';
+import '../services/saved_builds_service.dart';
+import 'saved_builds_screen.dart';
 
 // Performance service provider
 final performanceServiceProvider = Provider((ref) => PerformanceService());
@@ -131,6 +133,76 @@ class ReviewBuildScreen extends ConsumerWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showSaveDialog(context, ref, buildState),
+        icon: const Icon(Icons.save),
+        label: const Text('Save Build'),
+        backgroundColor: Colors.blueAccent,
+      ),
+    );
+  }
+
+  void _showSaveDialog(BuildContext context, WidgetRef ref, BuildState state) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Build'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Build Name',
+            hintText: 'e.g., Gaming Beast, Budget Build',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a name')),
+                );
+                return;
+              }
+
+              final service = ref.read(savedBuildsServiceProvider);
+              final components = <ComponentType, Component>{};
+              state.selectedComponents.forEach((key, value) {
+                if (value != null) {
+                  components[key] = value;
+                }
+              });
+
+              final build = SavedBuild(
+                id: service.generateId(),
+                name: name,
+                components: components,
+                totalPrice: state.totalPrice,
+                createdAt: DateTime.now(),
+              );
+
+              await service.addBuild(build);
+              ref.invalidate(savedBuildsProvider);
+
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Saved "$name"')));
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
