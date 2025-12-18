@@ -2,49 +2,256 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 import '../providers/build_provider.dart';
+import '../services/amazon_api_service.dart';
 
-class ComponentSelectionScreen extends ConsumerWidget {
+class ComponentSelectionScreen extends ConsumerStatefulWidget {
   final ComponentType componentType;
 
   const ComponentSelectionScreen({super.key, required this.componentType});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // In a real app, this would come from a repository/API
-    final components = _getMockComponents(componentType);
+  ConsumerState<ComponentSelectionScreen> createState() =>
+      _ComponentSelectionScreenState();
+}
+
+class _ComponentSelectionScreenState
+    extends ConsumerState<ComponentSelectionScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  late String _currentQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentQuery = AmazonApiService.getDefaultQuery(widget.componentType);
+    _searchController.text = _currentQuery;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _performSearch() {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty && query != _currentQuery) {
+      setState(() {
+        _currentQuery = query;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final componentsAsync = ref.watch(
+      componentsProvider((type: widget.componentType, query: _currentQuery)),
+    );
 
     return Scaffold(
-      appBar: AppBar(title: Text('Select ${componentType.name.toUpperCase()}')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: components.length,
-        itemBuilder: (context, index) {
-          final component = components[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              title: Text(
-                component.name,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(component.brand),
-                  const SizedBox(height: 4),
-                  // Simple specs display
-                  ...component.specs.entries.map(
-                    (e) => Text(
-                      '${e.key}: ${e.value}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+      appBar: AppBar(
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Search products...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (_) {
+                  _performSearch();
+                  setState(() => _isSearching = false);
+                },
+              )
+            : Text('Select ${_getTypeLabel(widget.componentType)}'),
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _performSearch();
+                }
+              });
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Search hint
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Colors.blueAccent.withAlpha(25),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Colors.blueAccent,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Showing results for: "$_currentQuery"',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          // Product list
+          Expanded(
+            child: componentsAsync.when(
+              loading: () => const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Fetching products from Amazon...'),
+                  ],
+                ),
               ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.redAccent,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error: $error',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => ref.invalidate(
+                          componentsProvider((
+                            type: widget.componentType,
+                            query: _currentQuery,
+                          )),
+                        ),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (components) => components.isEmpty
+                  ? const Center(child: Text('No products found'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: components.length,
+                      itemBuilder: (context, index) {
+                        final component = components[index];
+                        return _buildProductCard(component);
+                      },
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(Component component) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          ref.read(buildProvider.notifier).selectComponent(component);
+          Navigator.pop(context);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Product image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: component.imageUrl != null
+                    ? Image.network(
+                        component.imageUrl!,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.image_not_supported),
+                        ),
+                      )
+                    : Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey[800],
+                        child: const Icon(Icons.memory),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              // Product details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      component.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      component.brand,
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (component.specs['Rating'] != null &&
+                            component.specs['Rating'] != 'N/A')
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                size: 14,
+                                color: Colors.amber,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${component.specs['Rating']}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        Text(
+                          '${component.specs['Reviews']} reviews',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Price and add button
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
@@ -56,134 +263,41 @@ class ComponentSelectionScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    child: const Icon(Icons.add, color: Colors.blueAccent),
-                    onTap: () {
-                      ref
-                          .read(buildProvider.notifier)
-                          .selectComponent(component);
-                      Navigator.pop(context);
-                    },
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.add, size: 20),
                   ),
                 ],
               ),
-              onTap: () {
-                ref.read(buildProvider.notifier).selectComponent(component);
-                Navigator.pop(context);
-              },
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  // Temporary mock data generator
-  List<Component> _getMockComponents(ComponentType type) {
+  String _getTypeLabel(ComponentType type) {
     switch (type) {
       case ComponentType.cpu:
-        return [
-          const Component(
-            id: 'c1',
-            name: 'Core i9-13900K',
-            brand: 'Intel',
-            type: ComponentType.cpu,
-            price: 589.99,
-            specs: {'Cores': '24', 'Threads': '32', 'Socket': 'LGA1700'},
-          ),
-          const Component(
-            id: 'c2',
-            name: 'Ryzen 9 7950X',
-            brand: 'AMD',
-            type: ComponentType.cpu,
-            price: 559.00,
-            specs: {'Cores': '16', 'Threads': '32', 'Socket': 'AM5'},
-          ),
-          const Component(
-            id: 'c3',
-            name: 'Core i5-13600K',
-            brand: 'Intel',
-            type: ComponentType.cpu,
-            price: 319.99,
-            specs: {'Cores': '14', 'Threads': '20', 'Socket': 'LGA1700'},
-          ),
-        ];
+        return 'CPU';
       case ComponentType.gpu:
-        return [
-          const Component(
-            id: 'g1',
-            name: 'GeForce RTX 4090',
-            brand: 'NVIDIA',
-            type: ComponentType.gpu,
-            price: 1599.99,
-            specs: {'VRAM': '24GB', 'Clock': '2.52 GHz'},
-          ),
-          const Component(
-            id: 'g2',
-            name: 'Radeon RX 7900 XTX',
-            brand: 'AMD',
-            type: ComponentType.gpu,
-            price: 999.99,
-            specs: {'VRAM': '24GB', 'Clock': '2.50 GHz'},
-          ),
-          const Component(
-            id: 'g3',
-            name: 'GeForce RTX 4070',
-            brand: 'NVIDIA',
-            type: ComponentType.gpu,
-            price: 599.99,
-            specs: {'VRAM': '12GB', 'Clock': '2.48 GHz'},
-          ),
-        ];
+        return 'GPU';
       case ComponentType.ram:
-        return [
-          const Component(
-            id: 'r1',
-            name: 'Vengeance 32GB (2x16GB) DDR5',
-            brand: 'Corsair',
-            type: ComponentType.ram,
-            price: 149.99,
-            specs: {'Speed': '6000MHz', 'Latency': 'CL36'},
-          ),
-          const Component(
-            id: 'r2',
-            name: 'Trident Z5 32GB (2x16GB) DDR5',
-            brand: 'G.Skill',
-            type: ComponentType.ram,
-            price: 169.99,
-            specs: {'Speed': '6400MHz', 'Latency': 'CL32'},
-          ),
-        ];
+        return 'RAM';
       case ComponentType.motherboard:
-        return [
-          const Component(
-            id: 'm1',
-            name: 'Z790 AORUS ELITE',
-            brand: 'Gigabyte',
-            type: ComponentType.motherboard,
-            price: 259.99,
-            specs: {'Socket': 'LGA1700', 'Form Factor': 'ATX'},
-          ),
-          const Component(
-            id: 'm2',
-            name: 'ROG STRIX B650E-F',
-            brand: 'ASUS',
-            type: ComponentType.motherboard,
-            price: 299.99,
-            specs: {'Socket': 'AM5', 'Form Factor': 'ATX'},
-          ),
-        ];
-      default:
-        return [
-          Component(
-            id: 'x1',
-            name: 'Generic ${type.name} Item',
-            brand: 'Generic',
-            type: type,
-            price: 99.99,
-            specs: {'Note': 'Placeholder item'},
-          ),
-        ];
+        return 'Motherboard';
+      case ComponentType.storage:
+        return 'Storage';
+      case ComponentType.psu:
+        return 'Power Supply';
+      case ComponentType.pcCase:
+        return 'Case';
+      case ComponentType.cooling:
+        return 'Cooling';
     }
   }
 }
