@@ -30,8 +30,10 @@ class AuthService {
         email: email.trim(),
         password: password,
       );
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseException catch (e) {
       throw _handleAuthException(e);
+    } catch (e) {
+      throw 'An error occurred. Please try again.';
     }
   }
 
@@ -53,8 +55,10 @@ class AuthService {
       }
 
       return credential;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseException catch (e) {
       throw _handleAuthException(e);
+    } catch (e) {
+      throw 'An error occurred. Please try again.';
     }
   }
 
@@ -67,18 +71,22 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseException catch (e) {
       throw _handleAuthException(e);
+    } catch (e) {
+      throw 'An error occurred. Please try again.';
     }
   }
 
   /// Handle Firebase auth exceptions
-  String _handleAuthException(FirebaseAuthException e) {
+  String _handleAuthException(FirebaseException e) {
     switch (e.code) {
       case 'user-not-found':
         return 'No account found with this email.';
       case 'wrong-password':
         return 'Incorrect password.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
       case 'email-already-in-use':
         return 'An account already exists with this email.';
       case 'weak-password':

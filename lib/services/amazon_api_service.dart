@@ -35,7 +35,7 @@ class ProductDetails {
 class AmazonApiService {
   static const String _baseUrl = 'real-time-amazon-data.p.rapidapi.com';
   static const String _apiKey =
-      '3d87f97ae9msh455fb48c7acdfcep1591bcjsnad1e4bb403f9';
+      'fd089ea58bmsh78ffdc2b476abc2p1dbf21jsn04f5b293d345';
   static const String _apiHost = 'real-time-amazon-data.p.rapidapi.com';
 
   Future<List<Component>> searchProducts({
@@ -53,36 +53,54 @@ class AmazonApiService {
       'page': '1',
     });
 
-    final response = await http.get(
-      uri,
-      headers: {'x-rapidapi-key': _apiKey, 'x-rapidapi-host': _apiHost},
-    );
+    try {
+      final response = await http
+          .get(
+            uri,
+            headers: {'x-rapidapi-key': _apiKey, 'x-rapidapi-host': _apiHost},
+          )
+          .timeout(const Duration(seconds: 15));
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final products = data['data']?['products'] as List? ?? [];
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final products = data['data']?['products'] as List? ?? [];
 
-      return products.take(10).map((product) {
-        final priceStr = product['product_price'] as String? ?? '\$0';
-        final priceValue =
-            double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+        return products.take(10).map((product) {
+          final priceStr = product['product_price'] as String? ?? '\$0';
+          final priceValue =
+              double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ??
+              0.0;
 
-        return Component(
-          id: product['asin'] ?? '',
-          name: product['product_title'] ?? 'Unknown Product',
-          brand: _extractBrand(product['product_title'] ?? ''),
-          type: componentType,
-          price: priceValue,
-          imageUrl: product['product_photo'],
-          specs: {
-            'Rating': product['product_star_rating'] ?? 'N/A',
-            'Reviews': product['product_num_ratings']?.toString() ?? '0',
-            'ProductUrl': product['product_url'] ?? '',
-          },
+          return Component(
+            id: product['asin'] ?? '',
+            name: product['product_title'] ?? 'Unknown Product',
+            brand: _extractBrand(product['product_title'] ?? ''),
+            type: componentType,
+            price: priceValue,
+            imageUrl: product['product_photo'],
+            specs: {
+              'Rating': product['product_star_rating'] ?? 'N/A',
+              'Reviews': product['product_num_ratings']?.toString() ?? '0',
+              'ProductUrl': product['product_url'] ?? '',
+            },
+          );
+        }).toList();
+      } else if (response.statusCode == 403) {
+        throw Exception(
+          'API key invalid or expired. Please check your RapidAPI subscription.',
         );
-      }).toList();
-    } else {
-      throw Exception('Failed to load products: ${response.statusCode}');
+      } else if (response.statusCode == 429) {
+        throw Exception('API rate limit exceeded. Please try again later.');
+      } else {
+        throw Exception('Failed to load products: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e.toString().contains('TimeoutException')) {
+        throw Exception(
+          'Request timed out. Please check your internet connection.',
+        );
+      }
+      rethrow;
     }
   }
 

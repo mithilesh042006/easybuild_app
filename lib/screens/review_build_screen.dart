@@ -144,89 +144,130 @@ class ReviewBuildScreen extends ConsumerWidget {
 
   void _showSaveDialog(BuildContext context, WidgetRef ref, BuildState state) {
     final controller = TextEditingController();
+    bool isPublic = false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Save Build'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Build Name',
-            hintText: 'e.g., Gaming Beast, Budget Build',
-            border: OutlineInputBorder(),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Save Build'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Build Name',
+                  hintText: 'e.g., Gaming Beast, Budget Build',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Public/Private toggle
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade700),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SwitchListTile(
+                  title: const Text('Share with Community'),
+                  subtitle: Text(
+                    isPublic
+                        ? 'Everyone can see this build'
+                        : 'Only you can see this build',
+                    style: TextStyle(
+                      color: isPublic ? Colors.green : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: isPublic,
+                  onChanged: (value) {
+                    setDialogState(() => isPublic = value);
+                  },
+                  secondary: Icon(
+                    isPublic ? Icons.public : Icons.lock,
+                    color: isPublic ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please enter a name')),
-                );
-                return;
-              }
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Please enter a name')),
+                  );
+                  return;
+                }
 
-              try {
-                final service = ref.read(savedBuildsServiceProvider);
+                try {
+                  final service = ref.read(savedBuildsServiceProvider);
 
-                // Check if user is authenticated
-                if (service.currentUserId == null) {
+                  // Check if user is authenticated
+                  if (service.currentUserId == null) {
+                    if (dialogContext.mounted) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please login to save builds'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  final components = <ComponentType, Component>{};
+                  state.selectedComponents.forEach((key, value) {
+                    if (value != null) {
+                      components[key] = value;
+                    }
+                  });
+
+                  final build = SavedBuild(
+                    id: service.generateId(),
+                    name: name,
+                    components: components,
+                    totalPrice: state.totalPrice,
+                    createdAt: DateTime.now(),
+                    userId: service.currentUserId!,
+                    isPublic: isPublic,
+                    authorName: service.currentUserName,
+                  );
+
+                  await service.addBuild(build);
+
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                    final message = isPublic
+                        ? 'Saved "$name" and shared with community!'
+                        : 'Saved "$name"';
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                  }
+                } catch (e) {
                   if (dialogContext.mounted) {
                     ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please login to save builds'),
+                      SnackBar(
+                        content: Text('Error saving build: $e'),
                         backgroundColor: Colors.red,
                       ),
                     );
                   }
-                  return;
                 }
-
-                final components = <ComponentType, Component>{};
-                state.selectedComponents.forEach((key, value) {
-                  if (value != null) {
-                    components[key] = value;
-                  }
-                });
-
-                final build = SavedBuild(
-                  id: service.generateId(),
-                  name: name,
-                  components: components,
-                  totalPrice: state.totalPrice,
-                  createdAt: DateTime.now(),
-                  userId: service.currentUserId!,
-                );
-
-                await service.addBuild(build);
-
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Saved "$name"')));
-                }
-              } catch (e) {
-                if (dialogContext.mounted) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(
-                      content: Text('Error saving build: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'builder_screen.dart';
 import 'saved_builds_screen.dart';
 import 'compare_builds_screen.dart';
+import 'community_screen.dart';
 import '../services/auth_service.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -86,6 +87,24 @@ class HomeScreen extends ConsumerWidget {
                 label: const Text('My Saved Builds'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Community button
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CommunityScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.people),
+                label: const Text('Community Builds'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  foregroundColor: Colors.green,
+                  side: const BorderSide(color: Colors.green),
                 ),
               ),
               const SizedBox(height: 16),
