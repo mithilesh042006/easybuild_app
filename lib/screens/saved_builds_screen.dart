@@ -5,21 +5,12 @@ import '../services/saved_builds_service.dart';
 import '../providers/build_provider.dart';
 import 'builder_screen.dart';
 
-// Saved builds service provider
-final savedBuildsServiceProvider = Provider((ref) => SavedBuildsService());
-
-// Saved builds list provider
-final savedBuildsProvider = FutureProvider<List<SavedBuild>>((ref) async {
-  final service = ref.watch(savedBuildsServiceProvider);
-  return service.loadBuilds();
-});
-
 class SavedBuildsScreen extends ConsumerWidget {
   const SavedBuildsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final buildsAsync = ref.watch(savedBuildsProvider);
+    final buildsAsync = ref.watch(savedBuildsStreamProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Saved Builds'), centerTitle: true),
@@ -205,7 +196,7 @@ class SavedBuildsScreen extends ConsumerWidget {
     if (confirmed == true) {
       final service = ref.read(savedBuildsServiceProvider);
       await service.deleteBuild(build.id);
-      ref.invalidate(savedBuildsProvider);
+      // Stream auto-updates, no invalidation needed
 
       if (context.mounted) {
         ScaffoldMessenger.of(

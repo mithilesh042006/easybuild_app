@@ -4,7 +4,6 @@ import '../models/component.dart';
 import '../providers/build_provider.dart';
 import '../services/saved_builds_service.dart';
 import '../services/performance_service.dart';
-import 'saved_builds_screen.dart';
 
 class CompareBuildsScreen extends ConsumerStatefulWidget {
   const CompareBuildsScreen({super.key});
@@ -27,7 +26,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
   }
 
   Widget _buildSelectionScreen() {
-    final buildsAsync = ref.watch(savedBuildsProvider);
+    final buildsAsync = ref.watch(savedBuildsStreamProvider);
 
     return Scaffold(
       appBar: AppBar(

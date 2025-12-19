@@ -1,5 +1,6 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 
 /// Model for a saved PC build
@@ -9,6 +10,7 @@ class SavedBuild {
   final Map<ComponentType, Component> components;
   final double totalPrice;
   final DateTime createdAt;
+  final String userId;
 
   const SavedBuild({
     required this.id,
@@ -16,6 +18,7 @@ class SavedBuild {
     required this.components,
     required this.totalPrice,
     required this.createdAt,
+    required this.userId,
   });
 
   Map<String, dynamic> toJson() {
@@ -26,13 +29,15 @@ class SavedBuild {
         (key, value) => MapEntry(key.index.toString(), _componentToJson(value)),
       ),
       'totalPrice': totalPrice,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'userId': userId,
     };
   }
 
-  factory SavedBuild.fromJson(Map<String, dynamic> json) {
+  factory SavedBuild.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
     final componentsMap = <ComponentType, Component>{};
-    final componentsJson = json['components'] as Map<String, dynamic>? ?? {};
+    final componentsJson = data['components'] as Map<String, dynamic>? ?? {};
 
     componentsJson.forEach((key, value) {
       final typeIndex = int.tryParse(key);
@@ -43,12 +48,16 @@ class SavedBuild {
       }
     });
 
+    final createdAtTimestamp = data['createdAt'] as Timestamp?;
+    final createdAt = createdAtTimestamp?.toDate() ?? DateTime.now();
+
     return SavedBuild(
-      id: json['id'] ?? '',
-      name: json['name'] ?? 'Unnamed Build',
+      id: doc.id,
+      name: data['name'] ?? 'Unnamed Build',
       components: componentsMap,
-      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      totalPrice: (data['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      createdAt: createdAt,
+      userId: data['userId'] ?? '',
     );
   }
 
@@ -77,48 +86,70 @@ class SavedBuild {
   }
 }
 
-/// Service for persisting saved builds
+/// Service for persisting saved builds to Firestore
 class SavedBuildsService {
-  static const String _storageKey = 'saved_builds';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<List<SavedBuild>> loadBuilds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_storageKey);
-
-    if (jsonString == null || jsonString.isEmpty) {
-      return [];
-    }
-
-    try {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      return jsonList
-          .map((j) => SavedBuild.fromJson(j as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+  /// Get the current user's builds collection reference
+  CollectionReference? _getUserBuildsCollection() {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return null;
+    return _firestore.collection('users').doc(userId).collection('builds');
   }
 
-  Future<void> saveBuilds(List<SavedBuild> builds) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = builds.map((b) => b.toJson()).toList();
-    await prefs.setString(_storageKey, json.encode(jsonList));
+  /// Load all builds for the current user
+  Stream<List<SavedBuild>> loadBuildsStream() {
+    final collection = _getUserBuildsCollection();
+    if (collection == null) {
+      return Stream.value([]);
+    }
+
+    return collection.orderBy('createdAt', descending: true).snapshots().map((
+      snapshot,
+    ) {
+      return snapshot.docs.map((doc) => SavedBuild.fromFirestore(doc)).toList();
+    });
   }
 
+  /// Add a new build to Firestore
   Future<void> addBuild(SavedBuild build) async {
-    final builds = await loadBuilds();
-    builds.insert(0, build); // Add at beginning (most recent first)
-    await saveBuilds(builds);
+    final collection = _getUserBuildsCollection();
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await collection.doc(build.id).set(build.toJson());
   }
 
+  /// Delete a build from Firestore
   Future<void> deleteBuild(String id) async {
-    final builds = await loadBuilds();
-    builds.removeWhere((b) => b.id == id);
-    await saveBuilds(builds);
+    final collection = _getUserBuildsCollection();
+    if (collection == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await collection.doc(id).delete();
   }
 
   /// Generate unique ID for a new build
   String generateId() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
+    final collection = _getUserBuildsCollection();
+    if (collection == null) {
+      return DateTime.now().millisecondsSinceEpoch.toString();
+    }
+    return collection.doc().id;
   }
+
+  /// Get current user ID
+  String? get currentUserId => _auth.currentUser?.uid;
 }
+
+/// Provider for SavedBuildsService
+final savedBuildsServiceProvider = Provider((ref) => SavedBuildsService());
+
+/// Stream provider for saved builds (auto-updates)
+final savedBuildsStreamProvider = StreamProvider<List<SavedBuild>>((ref) {
+  final service = ref.watch(savedBuildsServiceProvider);
+  return service.loadBuildsStream();
+});

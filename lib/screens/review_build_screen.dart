@@ -6,7 +6,6 @@ import '../models/component.dart';
 import '../providers/build_provider.dart';
 import '../services/performance_service.dart';
 import '../services/saved_builds_service.dart';
-import 'saved_builds_screen.dart';
 
 // Performance service provider
 final performanceServiceProvider = Provider((ref) => PerformanceService());
@@ -148,7 +147,7 @@ class ReviewBuildScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Save Build'),
         content: TextField(
           controller: controller,
@@ -161,43 +160,68 @@ class ReviewBuildScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
               final name = controller.text.trim();
               if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(content: Text('Please enter a name')),
                 );
                 return;
               }
 
-              final service = ref.read(savedBuildsServiceProvider);
-              final components = <ComponentType, Component>{};
-              state.selectedComponents.forEach((key, value) {
-                if (value != null) {
-                  components[key] = value;
+              try {
+                final service = ref.read(savedBuildsServiceProvider);
+
+                // Check if user is authenticated
+                if (service.currentUserId == null) {
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please login to save builds'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                  return;
                 }
-              });
 
-              final build = SavedBuild(
-                id: service.generateId(),
-                name: name,
-                components: components,
-                totalPrice: state.totalPrice,
-                createdAt: DateTime.now(),
-              );
+                final components = <ComponentType, Component>{};
+                state.selectedComponents.forEach((key, value) {
+                  if (value != null) {
+                    components[key] = value;
+                  }
+                });
 
-              await service.addBuild(build);
-              ref.invalidate(savedBuildsProvider);
+                final build = SavedBuild(
+                  id: service.generateId(),
+                  name: name,
+                  components: components,
+                  totalPrice: state.totalPrice,
+                  createdAt: DateTime.now(),
+                  userId: service.currentUserId!,
+                );
 
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Saved "$name"')));
+                await service.addBuild(build);
+
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Saved "$name"')));
+                }
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error saving build: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Save'),
