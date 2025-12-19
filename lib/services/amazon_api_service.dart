@@ -43,8 +43,12 @@ class AmazonApiService {
     required ComponentType componentType,
     String country = 'US',
   }) async {
+    // Always enforce component context in search query to prevent irrelevant results
+    final componentKeywords = getDefaultQuery(componentType);
+    final enforcedQuery = _buildEnforcedQuery(query, componentKeywords);
+
     final uri = Uri.https(_baseUrl, '/search', {
-      'query': query,
+      'query': enforcedQuery,
       'country': country,
       'page': '1',
     });
@@ -133,6 +137,26 @@ class AmazonApiService {
     } else {
       throw Exception('Failed to load product details: ${response.statusCode}');
     }
+  }
+
+  /// Build enforced query by appending component keywords to user's search
+  /// This ensures searches stay relevant to the component type
+  String _buildEnforcedQuery(String userQuery, String componentKeywords) {
+    final normalizedUserQuery = userQuery.toLowerCase().trim();
+    final normalizedKeywords = componentKeywords.toLowerCase();
+
+    // Check if user query already contains the main component keywords
+    final keywordParts = normalizedKeywords.split(' ');
+    final hasKeywords = keywordParts.any(
+      (keyword) => keyword.length > 2 && normalizedUserQuery.contains(keyword),
+    );
+
+    // If user already included component keywords, use their query
+    // Otherwise, append component keywords to ensure relevant results
+    if (hasKeywords) {
+      return userQuery.trim();
+    }
+    return '${userQuery.trim()} $componentKeywords';
   }
 
   String _extractBrand(String title) {
