@@ -14,14 +14,22 @@ final productDetailsProvider = FutureProvider.family<ProductDetails, String>((
   return apiService.getProductDetails(asin: asin);
 });
 
-class ProductDetailScreen extends ConsumerWidget {
+class ProductDetailScreen extends ConsumerStatefulWidget {
   final Component component;
 
   const ProductDetailScreen({super.key, required this.component});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailsAsync = ref.watch(productDetailsProvider(component.id));
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  String? _selectedImageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final detailsAsync = ref.watch(productDetailsProvider(widget.component.id));
 
     return Scaffold(
       body: detailsAsync.when(
@@ -36,7 +44,11 @@ class ProductDetailScreen extends ConsumerWidget {
           ),
         ),
         error: (error, stack) => _buildErrorState(context, ref, error),
-        data: (details) => _buildDetailsView(context, ref, details),
+        data: (details) {
+          // Initialize selected image if not set
+          _selectedImageUrl ??= details.imageUrl;
+          return _buildDetailsView(context, ref, details);
+        },
       ),
     );
   }
@@ -44,7 +56,7 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
     return CustomScrollView(
       slivers: [
-        _buildAppBar(context, component.imageUrl),
+        _buildAppBar(context, widget.component.imageUrl),
         SliverFillRemaining(
           child: Center(
             child: Padding(
@@ -65,8 +77,9 @@ class ProductDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () =>
-                        ref.invalidate(productDetailsProvider(component.id)),
+                    onPressed: () => ref.invalidate(
+                      productDetailsProvider(widget.component.id),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -85,7 +98,7 @@ class ProductDetailScreen extends ConsumerWidget {
   ) {
     return CustomScrollView(
       slivers: [
-        _buildAppBar(context, details.imageUrl),
+        _buildAppBar(context, _selectedImageUrl ?? details.imageUrl),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -96,7 +109,10 @@ class ProductDetailScreen extends ConsumerWidget {
                 if (details.brand != null)
                   Text(
                     details.brand!,
-                    style: TextStyle(color: Colors.blueAccent, fontSize: 14),
+                    style: const TextStyle(
+                      color: Colors.blueAccent,
+                      fontSize: 14,
+                    ),
                   ),
                 const SizedBox(height: 8),
 
@@ -159,11 +175,16 @@ class ProductDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Image Gallery
+                // Image Gallery - Now Interactive!
                 if (details.images.isNotEmpty) ...[
                   const Text(
                     'Product Images',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tap an image to view it larger',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -172,24 +193,38 @@ class ProductDetailScreen extends ConsumerWidget {
                       scrollDirection: Axis.horizontal,
                       itemCount: details.images.length,
                       itemBuilder: (context, index) {
-                        return Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey[700]!),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              details.images[index],
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                        final imageUrl = details.images[index];
+                        final isSelected = _selectedImageUrl == imageUrl;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedImageUrl = imageUrl;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Colors.blueAccent
+                                    : Colors.grey[700]!,
+                                width: isSelected ? 3 : 1,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                imageUrl,
                                 width: 100,
                                 height: 100,
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.image_not_supported),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.image_not_supported),
+                                ),
                               ),
                             ),
                           ),
