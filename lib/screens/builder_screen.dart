@@ -4,6 +4,7 @@ import '../models/component.dart';
 import '../providers/build_provider.dart';
 import 'component_selection_screen.dart';
 import 'review_build_screen.dart';
+import 'product_detail_screen.dart';
 
 class BuilderScreen extends ConsumerWidget {
   const BuilderScreen({super.key});
@@ -114,6 +115,8 @@ class BuilderScreen extends ConsumerWidget {
           style: TextStyle(
             color: selectedComponent != null ? Colors.white : Colors.grey,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: selectedComponent != null
             ? Row(
@@ -128,12 +131,21 @@ class BuilderScreen extends ConsumerWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit, size: 20),
+                    tooltip: 'Change component',
                     onPressed: () => _navigateToSelection(context, type),
                   ),
                 ],
               )
             : const Icon(Icons.add_circle_outline),
-        onTap: () => _navigateToSelection(context, type),
+        onTap: () {
+          if (selectedComponent != null) {
+            // Navigate to product detail screen for viewing
+            _navigateToProductDetail(context, selectedComponent);
+          } else {
+            // Navigate to component selection screen
+            _navigateToSelection(context, type);
+          }
+        },
       ),
     );
   }
@@ -142,6 +154,14 @@ class BuilderScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ComponentSelectionScreen(componentType: type),
+      ),
+    );
+  }
+
+  void _navigateToProductDetail(BuildContext context, Component component) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailScreen(component: component),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'builder_screen.dart';
 import 'saved_builds_screen.dart';
 import 'compare_builds_screen.dart';
 import 'community_screen.dart';
+import 'profile_screen.dart';
 import '../services/auth_service.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -19,11 +20,12 @@ class HomeScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: () async {
-              final authService = ref.read(authServiceProvider);
-              await authService.signOut();
+            icon: const Icon(Icons.person),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
             },
           ),
         ],
