@@ -99,13 +99,13 @@ class ReviewBuildScreen extends ConsumerWidget {
             // Bottleneck Analysis
             _buildSectionTitle('Bottleneck Analysis'),
             const SizedBox(height: 12),
-            _buildBottleneckCard(result),
+            _buildBottleneckCard(context, result),
             const SizedBox(height: 24),
 
             // Components Summary
             _buildSectionTitle('Build Summary'),
             const SizedBox(height: 12),
-            _buildComponentsList(buildState),
+            _buildComponentsList(context, buildState),
             const SizedBox(height: 24),
 
             // Disclaimer
@@ -284,43 +284,46 @@ class ReviewBuildScreen extends ConsumerWidget {
     final scoreLabel = _getScoreLabel(result.systemScore);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Text(
-              'Overall System Score',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            CircularPercentIndicator(
-              radius: 80,
-              lineWidth: 12,
-              percent: normalizedScore,
-              center: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    result.systemScore.toStringAsFixed(0),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    scoreLabel,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _getScoreColor(result.systemScore),
-                    ),
-                  ),
-                ],
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Text(
+                'Overall System Score',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              progressColor: _getScoreColor(result.systemScore),
-              backgroundColor: Colors.grey[800]!,
-              circularStrokeCap: CircularStrokeCap.round,
-            ),
-          ],
+              const SizedBox(height: 20),
+              CircularPercentIndicator(
+                radius: 80,
+                lineWidth: 12,
+                percent: normalizedScore,
+                center: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      result.systemScore.toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      scoreLabel,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _getScoreColor(result.systemScore),
+                      ),
+                    ),
+                  ],
+                ),
+                progressColor: _getScoreColor(result.systemScore),
+                backgroundColor: Colors.grey[800]!,
+                circularStrokeCap: CircularStrokeCap.round,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -531,7 +534,7 @@ class ReviewBuildScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottleneckCard(PerformanceResult result) {
+  Widget _buildBottleneckCard(BuildContext context, PerformanceResult result) {
     final (icon, color, message) = switch (result.bottleneck) {
       BottleneckType.cpu => (
         Icons.memory,
@@ -545,7 +548,9 @@ class ReviewBuildScreen extends ConsumerWidget {
       ),
       BottleneckType.balanced => (
         Icons.check_circle,
-        Colors.greenAccent,
+        Theme.of(context).brightness == Brightness.dark
+            ? Colors.greenAccent
+            : Colors.green[700]!,
         'Balanced System - No significant bottleneck detected',
       ),
     };
@@ -569,7 +574,7 @@ class ReviewBuildScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildComponentsList(BuildState state) {
+  Widget _buildComponentsList(BuildContext context, BuildState state) {
     final components = state.selectedComponents.entries
         .where((e) => e.value != null)
         .toList();
@@ -587,7 +592,11 @@ class ReviewBuildScreen extends ConsumerWidget {
             ),
             trailing: Text(
               component.priceFormatted,
-              style: const TextStyle(color: Colors.greenAccent),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.greenAccent
+                    : Colors.green[700],
+              ),
             ),
           );
         }).toList(),
@@ -620,7 +629,7 @@ class ReviewBuildScreen extends ConsumerWidget {
   Color _getScoreColor(double score) {
     if (score >= 35000) return Colors.purpleAccent;
     if (score >= 28000) return Colors.blueAccent;
-    if (score >= 20000) return Colors.greenAccent;
+    if (score >= 20000) return Colors.green;
     if (score >= 15000) return Colors.amber;
     if (score >= 10000) return Colors.orange;
     return Colors.redAccent;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
+import '../providers/theme_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -47,7 +48,7 @@ class ProfileScreen extends ConsumerWidget {
             // Email
             Text(
               user.email ?? 'No Email',
-              style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 32),
 
@@ -80,6 +81,19 @@ class ProfileScreen extends ConsumerWidget {
             //   value: user.emailVerified ? 'Yes' : 'No',
             //   valueColor: user.emailVerified ? Colors.green : Colors.orange,
             // ),
+            const SizedBox(height: 32),
+
+            // Appearance Section
+            _buildSectionTitle('Appearance'),
+            const SizedBox(height: 12),
+            _buildSwitchTile(
+              icon: Icons.dark_mode,
+              title: 'Dark Mode',
+              subtitle: 'Enable dark mode',
+              value: ref.watch(themeProvider) == ThemeMode.dark,
+              onChanged: (value) =>
+                  ref.read(themeProvider.notifier).toggleTheme(),
+            ),
             const SizedBox(height: 32),
 
             // Actions Section
@@ -150,31 +164,32 @@ class ProfileScreen extends ConsumerWidget {
     required String value,
     Color? valueColor,
   }) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blueAccent, size: 22),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-                const SizedBox(height: 2),
-                Text(value, style: TextStyle(fontSize: 15, color: valueColor)),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.blueAccent, size: 22),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: TextStyle(fontSize: 15, color: valueColor),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -186,17 +201,16 @@ class ProfileScreen extends ConsumerWidget {
     required VoidCallback onTap,
     Color? iconColor,
   }) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.hardEdge,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: Colors.grey[900],
         leading: Icon(icon, color: iconColor ?? Colors.blueAccent),
         title: Text(title),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
@@ -245,7 +259,10 @@ class ProfileScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sign Out'),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -258,5 +275,30 @@ class ProfileScreen extends ConsumerWidget {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
+  }
+
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.hardEdge,
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        secondary: Icon(icon, color: Colors.blueAccent),
+        title: Text(title),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+        value: value,
+        onChanged: onChanged,
+        activeColor: Colors.blueAccent,
+      ),
+    );
   }
 }

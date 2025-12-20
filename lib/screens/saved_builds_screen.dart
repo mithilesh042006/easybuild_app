@@ -136,10 +136,12 @@ class SavedBuildsScreen extends ConsumerWidget {
                   const Text('Total'),
                   Text(
                     '\$${build.totalPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.greenAccent,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.greenAccent
+                          : Colors.green[700],
                     ),
                   ),
                 ],

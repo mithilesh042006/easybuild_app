@@ -113,7 +113,9 @@ class BuilderScreen extends ConsumerWidget {
         subtitle: Text(
           selectedComponent?.name ?? 'Not Selected',
           style: TextStyle(
-            color: selectedComponent != null ? Colors.white : Colors.grey,
+            color: selectedComponent != null
+                ? Theme.of(context).textTheme.bodyMedium?.color
+                : Colors.grey,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -124,8 +126,10 @@ class BuilderScreen extends ConsumerWidget {
                 children: [
                   Text(
                     selectedComponent.priceFormatted,
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.greenAccent
+                          : Colors.green[700],
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -169,15 +173,15 @@ class BuilderScreen extends ConsumerWidget {
   Widget _buildSummary(BuildContext context, BuildState state) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black26,
+            color: Colors.black12,
             blurRadius: 10,
             offset: Offset(0, -4),
           ),
@@ -195,10 +199,12 @@ class BuilderScreen extends ConsumerWidget {
                 ),
                 Text(
                   '\$${state.totalPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.greenAccent,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.greenAccent
+                        : Colors.green[700],
                   ),
                 ),
               ],

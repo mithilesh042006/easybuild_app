@@ -119,7 +119,7 @@ class _ComponentSelectionScreenState
     extends ConsumerState<ComponentSelectionScreen> {
   String? _selectedBrand;
   String? _selectedModel;
-  String? _searchQuery;
+  String _searchQuery = '';
 
   late Map<String, List<String>> _brandsAndModels;
 
@@ -149,9 +149,10 @@ class _ComponentSelectionScreenState
         children: [
           // Selection area
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).cardColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withAlpha(30),
@@ -165,7 +166,7 @@ class _ComponentSelectionScreenState
               children: [
                 // Step 1: Brand Selection
                 const Text(
-                  'Step 1: Select Brand',
+                  'Select Brand',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -185,12 +186,14 @@ class _ComponentSelectionScreenState
                         setState(() {
                           _selectedBrand = selected ? brand : null;
                           _selectedModel = null;
-                          _searchQuery = null;
+                          _searchQuery = ''; // Reset to default search
                         });
                       },
                       selectedColor: Colors.blueAccent,
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey[300],
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.bodyMedium?.color,
                         fontWeight: isSelected
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -203,7 +206,7 @@ class _ComponentSelectionScreenState
                 if (_selectedBrand != null) ...[
                   const SizedBox(height: 16),
                   const Text(
-                    'Step 2: Select Model',
+                    'Select Model',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -226,12 +229,14 @@ class _ComponentSelectionScreenState
                           if (selected) {
                             _performSearch();
                           } else {
-                            setState(() => _searchQuery = null);
+                            setState(() => _searchQuery = '');
                           }
                         },
                         selectedColor: Colors.green,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey[300],
+                          color: isSelected
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodyMedium?.color,
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -242,7 +247,7 @@ class _ComponentSelectionScreenState
                 ],
 
                 // Selected info
-                if (_searchQuery != null) ...[
+                if (_searchQuery.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -274,29 +279,7 @@ class _ComponentSelectionScreenState
           ),
 
           // Product list
-          Expanded(
-            child: _searchQuery == null
-                ? _buildEmptyState()
-                : _buildProductList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.touch_app, size: 64, color: Colors.grey[600]),
-          const SizedBox(height: 16),
-          Text(
-            _selectedBrand == null
-                ? 'Select a brand to get started'
-                : 'Now select a model',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-          ),
+          Expanded(child: _buildProductList()),
         ],
       ),
     );
@@ -304,7 +287,7 @@ class _ComponentSelectionScreenState
 
   Widget _buildProductList() {
     final componentsAsync = ref.watch(
-      componentsProvider((type: widget.componentType, query: _searchQuery!)),
+      componentsProvider((type: widget.componentType, query: _searchQuery)),
     );
 
     return componentsAsync.when(
@@ -340,7 +323,7 @@ class _ComponentSelectionScreenState
                 onPressed: () => ref.invalidate(
                   componentsProvider((
                     type: widget.componentType,
-                    query: _searchQuery!,
+                    query: _searchQuery,
                   )),
                 ),
                 child: const Text('Retry'),
@@ -419,7 +402,7 @@ class _ComponentSelectionScreenState
                     const SizedBox(height: 4),
                     Text(
                       component.brand,
-                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -459,10 +442,12 @@ class _ComponentSelectionScreenState
                 children: [
                   Text(
                     component.priceFormatted,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.greenAccent,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.greenAccent
+                          : Colors.green[700],
                     ),
                   ),
                   const SizedBox(height: 8),

@@ -141,7 +141,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     if (details.reviewCount != null)
                       Text(
                         '(${details.reviewCount} reviews)',
-                        style: TextStyle(color: Colors.grey[400]),
+                        style: const TextStyle(color: Colors.grey),
                       ),
                   ],
                 ),
@@ -164,10 +164,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         details.priceDisplay ??
                             '\$${details.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.greenAccent,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.greenAccent
+                              : Colors.green[700],
                         ),
                       ),
                     ],
@@ -245,7 +247,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     details.description!,
-                    style: TextStyle(color: Colors.grey[300], height: 1.5),
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[300]
+                          : Colors.grey[800],
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -272,7 +279,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           Expanded(
                             child: Text(
                               f['feature'] ?? '',
-                              style: TextStyle(color: Colors.grey[300]),
+                              style: TextStyle(
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[800],
+                              ),
                             ),
                           ),
                         ],
@@ -333,7 +346,7 @@ class ProductDetailScreenWithActions extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: Theme.of(context).cardColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withAlpha(50),
