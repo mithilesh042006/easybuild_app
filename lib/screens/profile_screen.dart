@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
-import '../services/saved_builds_service.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -9,7 +8,6 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final buildsAsync = ref.watch(savedBuildsStreamProvider);
 
     if (user == null) {
       return Scaffold(
@@ -50,48 +48,6 @@ class ProfileScreen extends ConsumerWidget {
             Text(
               user.email ?? 'No Email',
               style: TextStyle(fontSize: 16, color: Colors.grey[400]),
-            ),
-            const SizedBox(height: 24),
-
-            // Stats Cards
-            buildsAsync.when(
-              loading: () => const CircularProgressIndicator(),
-              error: (e, s) => Text('Error: $e'),
-              data: (builds) {
-                final publicBuilds = builds.where((b) => b.isPublic).length;
-                final privateBuilds = builds.length - publicBuilds;
-
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.computer,
-                        value: '${builds.length}',
-                        label: 'Total Builds',
-                        color: Colors.blueAccent,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.public,
-                        value: '$publicBuilds',
-                        label: 'Public',
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        icon: Icons.lock,
-                        value: '$privateBuilds',
-                        label: 'Private',
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                );
-              },
             ),
             const SizedBox(height: 32),
 
@@ -302,46 +258,5 @@ class ProfileScreen extends ConsumerWidget {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(50)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-        ],
-      ),
-    );
   }
 }
