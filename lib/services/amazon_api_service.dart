@@ -35,7 +35,7 @@ class ProductDetails {
 class AmazonApiService {
   static const String _baseUrl = 'real-time-amazon-data.p.rapidapi.com';
   static const String _apiKey =
-      'fd089ea58bmsh78ffdc2b476abc2p1dbf21jsn04f5b293d345';
+      '310a2adbf0msh08eba5ec09aee90p10ef54jsnaf7e9db0f974';
   static const String _apiHost = 'real-time-amazon-data.p.rapidapi.com';
 
   Future<List<Component>> searchProducts({

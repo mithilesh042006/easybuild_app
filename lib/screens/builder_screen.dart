@@ -5,6 +5,7 @@ import '../providers/build_provider.dart';
 import 'component_selection_screen.dart';
 import 'review_build_screen.dart';
 import 'product_detail_screen.dart';
+import 'build_3d_viewer_screen.dart';
 
 class BuilderScreen extends ConsumerWidget {
   const BuilderScreen({super.key});
@@ -228,6 +229,25 @@ class BuilderScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('Review Build'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const Build3DViewerScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.view_in_ar),
+                label: const Text('View 3D Build'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Colors.blueAccent),
+                ),
               ),
             ),
           ],
